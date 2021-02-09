@@ -16,6 +16,12 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Assumption:
+ * The queue have at least 5 messages.
+ * The program will try to read 5 messages and process it one by one.
+ */
+
 public class ReceiveMessageDataLakeCallAndSettleAsyncSample {
 
     static  DataLakeFileSystemAsyncClient fileSystemAsyncClient;
@@ -52,11 +58,11 @@ public class ReceiveMessageDataLakeCallAndSettleAsyncSample {
         // Create  message receiver.
         Disposable subscription = receiver
                 .receiveMessages()
-                .timeout(Duration.ofSeconds(20))
+                .timeout(Duration.ofSeconds(20)) // timeout if no messages are received in 20 seconds
                 .doOnError(throwable -> {
                     System.out.println("Error during receiving " + throwable.getMessage());
                 })
-                .take(5)
+                .take(5) //  read 5 messages
                 .flatMapSequential(message -> {
                     receivedMessageCount.incrementAndGet();
                     DataLakeFileAsyncClient dlAsyncClient = fileSystemAsyncClient.getFileAsyncClient(fileName);
@@ -81,10 +87,11 @@ public class ReceiveMessageDataLakeCallAndSettleAsyncSample {
                 }, 1) // one thread at a time to process the message
                 .subscribe(m-> {
                     System.out.println(receivedMessageCount+". Finished service bus message for sequenceNumber: " + m.getSequenceNumber());
-            });
+                });
 
         // Subscribe is not a blocking call so we sleep here so the program does not end.
-        TimeUnit.SECONDS.sleep(5);
+        System.out.println("Wait for receive finish.");
+        TimeUnit.SECONDS.sleep(90);
         System.out.println("Exiting program.");
 
         // Disposing of the subscription will cancel the receive() operation.
